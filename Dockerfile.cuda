@@ -1,0 +1,75 @@
+FROM nvidia/cuda:11.6.1-cudnn8-runtime-ubuntu20.04
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    SHELL=/bin/bash \
+    LC_ALL=en_US.UTF-8 \
+    LANG=en_US.UTF-8 \
+    LANGUAGE=en_US.UTF-8 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /srv/jupyterhub
+
+RUN apt-get update -qq && \
+    apt-get install -yqq --no-install-recommends \
+        ca-certificates \
+        curl \
+        gnupg \
+        locales \
+        nodejs \
+        npm \
+        build-essential \
+        libssl-dev \
+        zlib1g-dev \
+        libbz2-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        wget \
+        llvm \
+        libncurses5-dev \
+        libncursesw5-dev \
+        xz-utils \
+        tk-dev \
+        libffi-dev \
+        liblzma-dev && \
+    locale-gen $LC_ALL && \
+    npm install -g configurable-http-proxy@^4.2.0 && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /var/log/* /var/tmp/* ~/.npm
+
+RUN wget https://www.python.org/ftp/python/3.10.12/Python-3.10.12.tgz && \
+    tar -xvf Python-3.10.12.tgz && \
+    cd Python-3.10.12 && \
+    ./configure --enable-optimizations && \
+    make -j$(nproc) && \
+    make altinstall && \
+    cd .. && \
+    rm -rf Python-3.10.12 Python-3.10.12.tgz
+
+RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py && \
+    python3.10 get-pip.py && \
+    rm get-pip.py
+
+RUN ln -s /usr/local/bin/python3.10 /usr/bin/python && \
+    ln -s /usr/local/bin/python3.10 /usr/bin/python3 && \
+    ln -s /usr/local/bin/pip3.10 /usr/bin/pip && \
+    ln -s /usr/local/bin/pip3.10 /usr/bin/pip3
+
+RUN python3.10 -m pip install --no-cache-dir \
+    jupyterhub==5.0.0 \
+    notebook \
+    numpy \
+    pandas \
+    matplotlib
+
+COPY jupyterhub_config.py /etc/jupyterhub/jupyterhub_config.py
+
+RUN chown 777 .
+RUN chmod 777 -R /srv/jupyterhub
+
+USER nobody
+
+EXPOSE 8000
+
+WORKDIR /srv/jupyterhub
+
+CMD ["jupyterhub", "-f", "/etc/jupyterhub/jupyterhub_config.py"]
