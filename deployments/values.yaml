@@ -1,0 +1,99 @@
+replicaCount: 1
+
+image:
+  registry: # image registry
+  projectName: # project namespace
+  repository: jupyterhub
+  repositoryCpu: jupyter-cpu
+  pullPolicy: Always
+  tag: "" # your tag (E.g v1.0.0)
+
+imagePullSecrets: []
+nameOverride: "jupyter"
+fullnameOverride: "jupyter"
+
+serviceAccount:
+  create: false
+  automount: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8000
+
+routes:
+  - enabled: true
+    name: jupyter
+    labels:
+      router: private
+    host: ""
+    tls:
+      enabled: true
+      insecureEdgeTerminationPolicy: Redirect
+      termination: edge
+    status: true
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  tls: []
+
+hasGpu: true
+
+resources:
+  limits:
+    cpu: 5
+    memory: 4Gi
+    gpu: 1
+  requests:
+    cpu: 5
+    memory: 4Gi
+
+livenessProbe:
+  httpGet:
+    path: /
+    port: 8000
+readinessProbe:
+  tcpSocket:
+    port: 8000
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 2
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+volumes:
+ - name: storage
+   persistentVolumeClaim:
+     claimName: jupyter-pvc
+
+volumeMounts:
+ - name: storage
+   mountPath: /tmp
+   readOnly: false
+
+nodeSelector: {}
+
+tolerations:
+  - effect: NoSchedule
+    key: nvidia.com/gpu
+    operator: Exists
+
+affinity: {}

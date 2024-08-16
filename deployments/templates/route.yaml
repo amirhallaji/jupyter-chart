@@ -1,0 +1,27 @@
+{{- range $route := .Values.routes }}
+{{- if $route.enabled }}
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  name: {{ $route.name }}
+  labels:
+    {{- toYaml $route.labels | nindent 6 }}
+  annotations:
+    {{- toYaml $route.annotations | nindent 6 }}
+spec:
+  host: {{ $route.host }}
+  port:
+    targetPort: {{ include "deployments.fullname" $ }}
+  {{- if $route.tls.enabled }}
+  tls:
+    insecureEdgeTerminationPolicy: {{$route.tls.insecureEdgeTerminationPolicy}}
+    termination: {{$route.tls.termination}}
+  {{- end }}
+  to:
+    kind: Service
+    name: {{ include "deployments.fullname" $ }}
+    weight: 100
+  wildcardPolicy: None
+{{- end }}
+---
+{{- end }}
